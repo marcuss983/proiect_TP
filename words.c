@@ -16,7 +16,7 @@ int load_words(const char *filename, char words[][MAX_LINE_LENGTH]){
     }
 
     while(fgets(words[count], MAX_LINE_LENGTH, f) != NULL && count < MAX_WORDS){
-        words[count][strcspn(words[count], "\n")] == '\0';
+        words[count][strcspn(words[count], "\n")] = '\0';
         count++;
     }
 
