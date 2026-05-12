@@ -67,7 +67,7 @@ static void check_guess(const char secret_word[], const char guess[], char feedb
     feedback[WORD_LENGTH] = '\0';
 }
 
-static void display_feedback(const char guess[], const char feedback[]){
+/*static void display_feedback(const char guess[], const char feedback[]){
     printf("Result: ");
 
     for(int i = 0; i < WORD_LENGTH; i++){
@@ -75,6 +75,20 @@ static void display_feedback(const char guess[], const char feedback[]){
     }
 
     printf("\n");
+}*/
+
+static void display_board(char guesses[][MAX_LINE_LENGTH], char feedbacks[][WORD_LENGTH + 1], int attempts){
+    printf("\n=== BOARD ===\n");
+
+    for(int i = 0; i < attempts; i++){
+        printf("%s  ", guesses[i]);
+
+        for(int j = 0; j < WORD_LENGTH; j++){
+            printf("%c ", feedbacks[i][j]);
+        }
+
+        printf("\n");
+    }
 }
 
 void play_game(void){
@@ -82,6 +96,8 @@ void play_game(void){
     char secret_word[MAX_LINE_LENGTH];
     char guess[MAX_LINE_LENGTH];
     char feedback[WORD_LENGTH + 1];
+    char guesses[MAX_ATTEMPTS][MAX_LINE_LENGTH];
+    char feedbacks[MAX_ATTEMPTS][WORD_LENGTH + 1];
     int word_count;
     int attempts = 0;
     int won = 0;
@@ -114,9 +130,13 @@ void play_game(void){
         }
 
         check_guess(secret_word, guess, feedback);
-        display_feedback(guess, feedback);
+
+        strcpy(guesses[attempts], guess);
+        strcpy(feedbacks[attempts], feedback);
 
         attempts++;
+
+        display_board(guesses, feedbacks, attempts);
 
         if(strcmp(guess, secret_word) == 0){
             won = 1;
