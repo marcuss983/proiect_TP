@@ -37,26 +37,29 @@ static int is_valid_guess_format(const char guess[]){
 }
 
 static void check_guess(const char secret_word[], const char guess[], char feedback[]){
-    int found;
+    int used_secret[WORD_LENGTH] = {0};
+
+    for(int i = 0; i < WORD_LENGTH; i++){
+        feedback[i] = 'B';
+    }
 
     for(int i = 0; i < WORD_LENGTH; i++){
         if(guess[i] == secret_word[i]){
             feedback[i] = 'G';
+            used_secret[i] = 1;
         }
-        else{
-            found = 0;
+    }
 
-            for(int j = 0; j < WORD_LENGTH; j++){
-                if(guess[i] == secret_word[j]){
-                    found = 1;
-                }
-            }
+    for(int i = 0; i < WORD_LENGTH; i++){
+        if(feedback[i] == 'G'){
+            continue;
+        }
 
-            if(found){
+        for(int j = 0; j < WORD_LENGTH; j++){
+            if(!used_secret[j] && guess[i] == secret_word[j]){
                 feedback[i] = 'Y';
-            }
-            else{
-                feedback[i] = 'B';
+                used_secret[j] = 1;
+                break;
             }
         }
     }
