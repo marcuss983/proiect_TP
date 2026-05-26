@@ -17,5 +17,5 @@ words.o: words.c words.h
 clean:
 	rm -f *.o wordle
 	
-gui: gui.c
-	gcc gui.c -o wordle_gui -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+gui: gui.c words.c words.h
+	gcc gui.c words.c -o wordle_gui -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
