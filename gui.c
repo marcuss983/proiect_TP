@@ -105,12 +105,13 @@ static void draw_board(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbac
     }
 }
 
-static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbacks[MAX_ATTEMPTS][WORD_LENGTH + 1], int *current_row, int *current_col, const char secret_word[], int *game_over, int *won){
+static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbacks[MAX_ATTEMPTS][WORD_LENGTH + 1], int *current_row, int *current_col, const char secret_word[], char words[][MAX_LINE_LENGTH], int word_count, int *game_over, int *won, char message[]){
    
     int key = GetCharPressed();
 
     while(key > 0){
         if(isalpha(key) && *current_col < WORD_LENGTH && *current_row < MAX_ATTEMPTS){
+            message[0] = '\0';
             guesses[*current_row][*current_col] = (char)toupper(key);
             (*current_col)++;
         }
@@ -120,17 +121,30 @@ static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedb
 
     if(IsKeyPressed(KEY_BACKSPACE)){
         if(*current_col > 0){
+            message[0] = '\0';
             (*current_col)--;
             guesses[*current_row][*current_col] = '\0';
         }
     }
 
     if(IsKeyPressed(KEY_ENTER)){
+        if(*current_col < WORD_LENGTH){
+            strcpy(message, "Not enough letters");
+            return;
+        }
+
         if(*current_col == WORD_LENGTH){
             char guess_lower[WORD_LENGTH + 1];
 
             strcpy(guess_lower, guesses[*current_row]);
             to_lowercase(guess_lower);
+
+            if(!is_valid_word(guess_lower, words, word_count)){
+                strcpy(message, "Word not in dictionary");
+                return;
+            }
+
+            message[0] = '\0';
 
             check_guess(secret_word, guess_lower, feedbacks[*current_row]);
 
@@ -139,7 +153,7 @@ static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedb
                 *game_over = 1;
             }
 
-            (*current_row)++;
+            (*current_row++);
             *current_col = 0;
 
             if(*current_row == MAX_ATTEMPTS && !(*won)){
@@ -162,6 +176,7 @@ int main(void)
     int current_col = 0;
     int game_over = 0;
     int won = 0;
+    char message[100] = "";
 
     word_count = load_words("words.txt", words);
 
@@ -179,7 +194,7 @@ int main(void)
     while (!WindowShouldClose())
     {
         if(!game_over){
-            handle_input(guesses, feedbacks, &current_row, &current_col, secret_word, &game_over, &won);
+            handle_input(guesses, feedbacks, &current_row, &current_col, secret_word, words, word_count, &game_over, &won, message);
         }
 
         BeginDrawing();
@@ -192,6 +207,10 @@ int main(void)
 
         if(!game_over){
             DrawText("Type a 5 letter word. ENTER to submit. BACKSPACE to delete.", 95, 620, 20, GRAY);
+
+            if(message[0] != '\0'){
+                DrawText(message, 285, 640, 22, RED);
+            }
         }
         else{
             if(won){
