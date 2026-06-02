@@ -1,0 +1,5 @@
+chair
+table
+phone
+clock
+plant

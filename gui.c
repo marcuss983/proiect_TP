@@ -5,7 +5,7 @@
 #include "words.h"
 
 #define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 700
+#define SCREEN_HEIGHT 900
 
 #define WORD_LENGTH 5
 #define MAX_ATTEMPTS 6
@@ -13,6 +13,41 @@
 #define TILE_SIZE 70
 #define TILE_SPACING 10
 
+typedef enum{
+    SCREEN_CATEGORY,
+    SCREEN_DIFFICULTY,
+    SCREEN_GAME
+}ScreenState;
+
+static const char *category_names[] = {
+    "Animals",
+    "Objects",
+    "Technology"
+};
+
+static const char *difficulty_names[] = {
+    "Easy",
+    "Medium",
+    "Hard"
+};
+
+static const char *word_files[3][3] = {
+    {
+        "data/animals_easy.txt",
+        "data/animals_medium.txt",
+        "data/animals_hard.txt"
+    },
+    {
+        "data/objects_easy.txt",
+        "data/objects_medium.txt",
+        "data/objects_hard.txt"
+    },
+    {
+        "data/technology_easy.txt",
+        "data/technology_medium.txt",
+        "data/technology_hard.txt"
+    }
+};
 
 static void to_lowercase(char text[]){
     for(int i = 0; text[i] != '\0'; i++){
@@ -105,7 +140,11 @@ static void draw_board(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbac
     }
 }
 
-static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbacks[MAX_ATTEMPTS][WORD_LENGTH + 1], int *current_row, int *current_col, const char secret_word[], char words[][MAX_LINE_LENGTH], int word_count, int *game_over, int *won, char message[]){
+static int calculate_score(int attempts_used){
+    return (MAX_ATTEMPTS - attempts_used + 1) * 100;
+}
+
+static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbacks[MAX_ATTEMPTS][WORD_LENGTH + 1], int *current_row, int *current_col, const char secret_word[], char words[][MAX_LINE_LENGTH], int word_count, int *game_over, int *won, int *score, char message[]){
    
     int key = GetCharPressed();
 
@@ -151,9 +190,10 @@ static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedb
             if(strcmp(guess_lower, secret_word) == 0){
                 *won = 1;
                 *game_over = 1;
+                *score = calculate_score(*current_row + 1);
             }
 
-            (*current_row++);
+            (*current_row)++;
             *current_col = 0;
 
             if(*current_row == MAX_ATTEMPTS && !(*won)){
@@ -162,6 +202,84 @@ static void handle_input(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedb
         }
     }
 }
+
+static void reset_game(char guesses[MAX_ATTEMPTS][WORD_LENGTH + 1], char feedbacks[MAX_ATTEMPTS][WORD_LENGTH + 1], char words[][MAX_LINE_LENGTH], int word_count, char secret_word[], int *current_row, int *current_col, int *game_over, int *won, int *score, int *high_score_saved, char message[]){
+    for(int i = 0; i < MAX_ATTEMPTS; i++){
+        for(int j = 0; j <= WORD_LENGTH; j++){
+            guesses[i][j] = '\0';
+            feedbacks[i][j] = '\0';
+        }
+    }
+
+    choose_random_word(words, word_count, secret_word);
+
+    *current_row = 0;
+    *current_col = 0;
+    *game_over = 0;
+    *won = 0;
+    *score = 0;
+    *high_score_saved = 0;
+    message[0] = '\0';
+}
+
+static void clear_char_queue(void){
+    while(GetCharPressed() > 0){
+
+    }
+}
+
+static int load_high_score(void){
+    FILE *f = fopen("highscore.txt", "r");
+    int high_score = 0;
+
+    if(f == NULL){
+        return 0;
+    }
+
+    fscanf(f, "%d", &high_score);
+    fclose(f);
+
+    return high_score;
+}
+static void save_high_score(int high_score){
+    FILE *f = fopen("highscore.txt", "w");
+
+    if(f == NULL){
+        return;
+    }
+
+    fprintf(f, "%d", high_score);
+    fclose(f);
+}
+
+static void draw_category_screen(void){
+    DrawText("WORDLE", 300, 80, 50, BLACK);
+    DrawText("Choose a category", 260, 180, 30, DARKGRAY);
+
+    DrawText("1. Animals", 310, 260, 25, BLACK);
+    DrawText("2. Objects", 310, 310, 25, BLACK);
+    DrawText("3. Technology", 310, 360, 25, BLACK);
+
+    DrawText("Press 1, 2 or 3", 300, 460, 20, GRAY);
+}
+
+static void draw_difficulty_screen(const char *categoty_name){
+    char title[100];
+
+    DrawText("WORDLE", 300, 80, 50, BLACK);
+
+    snprintf(title, sizeof(title), "Category: %s", categoty_name);
+    DrawText(title, 280, 160, 25, DARKGRAY);
+
+    DrawText("Choose difficulty", 265, 220, 30, DARKGRAY);
+
+    DrawText("1. Easy", 330, 300, 25, BLACK);
+    DrawText("2. Medium", 330, 350, 25, BLACK);
+    DrawText("3. Hard", 330, 400, 25, BLACK);
+
+    DrawText("Press 1, 2 or 3", 300, 500, 20, GRAY);
+}
+
 
 int main(void)
 {
@@ -176,16 +294,23 @@ int main(void)
     int current_col = 0;
     int game_over = 0;
     int won = 0;
+    int block_next_input = 0;
+    int score = 0;
+    int high_score = load_high_score();
+    int high_score_saved = 0;
+    ScreenState screen = SCREEN_CATEGORY;
+    int selected_category = -1;
+    int selected_difficulty = -1;
     char message[100] = "";
 
-    word_count = load_words("words.txt", words);
+    /*word_count = load_words("words.txt", words);
 
     if(word_count == 0){
         printf("No words loaded from words.txt\n");
         return 1;
     }
 
-    choose_random_word(words, word_count, secret_word);
+    choose_random_word(words, word_count, secret_word);*/
 
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Wordle Game");
@@ -193,35 +318,124 @@ int main(void)
 
     while (!WindowShouldClose())
     {
-        if(!game_over){
-            handle_input(guesses, feedbacks, &current_row, &current_col, secret_word, words, word_count, &game_over, &won, message);
+        if(screen == SCREEN_CATEGORY){
+            if(IsKeyPressed(KEY_ONE)){
+                selected_category = 0;
+                screen = SCREEN_DIFFICULTY;
+            }
+            else if(IsKeyPressed(KEY_TWO)){
+                selected_category = 1;
+                screen = SCREEN_DIFFICULTY;
+            }
+            else if(IsKeyPressed(KEY_THREE)){
+                selected_category = 2;
+                screen = SCREEN_DIFFICULTY;
+            }
         }
+        else if(screen == SCREEN_DIFFICULTY){
+            if(IsKeyPressed(KEY_ONE)){
+                selected_difficulty = 0;
+            }
+            else if(IsKeyPressed(KEY_TWO)){
+                selected_difficulty = 1;
+            }
+            else if(IsKeyPressed(KEY_THREE)){
+                selected_difficulty = 2;
+            }
+            if(selected_difficulty != -1){
+                word_count = load_words(word_files[selected_category][selected_difficulty], words);
+
+                if(word_count == 0){
+                    strcpy(message, "Could not load words file");
+                }
+                else{
+                    choose_random_word(words, word_count, secret_word);
+                    screen = SCREEN_GAME;
+                }
+            }
+        }
+        else if(screen == SCREEN_GAME){
+            if(!game_over){
+                if(block_next_input){
+                    clear_char_queue();
+                    block_next_input = 0;
+                }
+                else{
+                    handle_input(guesses, feedbacks, &current_row, &current_col, secret_word, words, word_count, &game_over, &won, &score, message);
+
+                }
+            }
+            else{
+                if(IsKeyPressed(KEY_R)){
+                    reset_game(guesses, feedbacks, words, word_count, secret_word, &current_row, &current_col, &game_over, &won, &score, &high_score_saved, message);
+
+                    block_next_input = 1;
+                }
+            }
+
+            if(game_over && won && !high_score_saved){
+                if(score > high_score){
+                    high_score = score;
+                    save_high_score(high_score);
+                }
+
+                high_score_saved = 1;
+            }
+        }
+        
 
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
-        DrawText("WORDLE", 300, 40, 50, BLACK);
-
-        draw_board(guesses, feedbacks, current_row);
-
-        if(!game_over){
-            DrawText("Type a 5 letter word. ENTER to submit. BACKSPACE to delete.", 95, 620, 20, GRAY);
+        if(screen == SCREEN_CATEGORY){
+            draw_category_screen();
+        }
+        else if(screen == SCREEN_DIFFICULTY){
+            draw_difficulty_screen(category_names[selected_category]);
 
             if(message[0] != '\0'){
-                DrawText(message, 285, 640, 22, RED);
+                DrawText(message, 260, 560, 22, RED);
             }
         }
-        else{
-            if(won){
-                DrawText("You won!", 330, 610, 30, GREEN);
+        else if(screen == SCREEN_GAME){
+            DrawText("WORDLE", 300, 40, 50, BLACK);
+
+            draw_board(guesses, feedbacks, current_row);
+
+            char score_text[100];
+            snprintf(score_text, sizeof(score_text), "Score: %d", score);
+            DrawText(score_text, 250, 650, 20, DARKGRAY);
+
+            char high_score_text[100];
+            snprintf(high_score_text, sizeof(high_score_text), "High Score: %d", high_score);
+            DrawText(high_score_text, 390, 650, 20, DARKGRAY);
+
+            if(!game_over){
+                DrawText("Type a 5 letter word.", 300, 690, 20, GRAY);
+                DrawText("ENTER = submit    BACKSPACE = delete", 220, 720, 20, GRAY);
+
+                if(message[0] != '\0'){
+                    DrawText(message, 285, 760, 22, RED);
+                }
             }
             else{
-                DrawText("You lost!", 330, 590, 30, RED);
+                if(won){
+                    DrawText("You won!", 330, 590, 30, GREEN);
 
-                char message[150];
-                snprintf(message, sizeof(message), "Word was: %s", secret_word);
-                DrawText(message, 310, 630, 20, DARKGRAY);
+                    char final_score[100];
+                    snprintf(final_score, sizeof(final_score), "Final score: %d", score);
+                    DrawText(final_score, 315, 730, 20, DARKGRAY);
+                }
+                else{
+                    DrawText("You lost!", 330, 675, 30, RED);
+
+                    char message[150];
+                    snprintf(message, sizeof(message), "Word was: %s", secret_word);
+                    DrawText(message, 310, 715, 20, DARKGRAY);
+                }
+
+                DrawText("Press R to restart", 300, 760, 20, DARKGRAY);
             }
         }
         EndDrawing();
